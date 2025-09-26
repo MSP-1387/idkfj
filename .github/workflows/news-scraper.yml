@@ -2,10 +2,10 @@ name: News Scraper Bot
 
 on:
   schedule:
-    # Run at Iran time: 8:00 AM, 2:00 PM, 8:00 PM (UTC+3:30)
-    - cron: '30 4 * * *'   # 8:00 AM Iran time (4:30 UTC)
-    - cron: '30 10 * * *'  # 2:00 PM Iran time (10:30 UTC)
-    - cron: '30 16 * * *'  # 8:00 PM Iran time (16:30 UTC)
+    # Run at Iran time: 1:00 PM, 3:00 PM, 6:00 PM (UTC+3:30)
+    - cron: '30 9 * * *'   # 1:00 PM Iran time (9:30 UTC)
+    - cron: '30 11 * * *'  # 3:00 PM Iran time (11:30 UTC)
+    - cron: '30 14 * * *'  # 6:00 PM Iran time (14:30 UTC)
   workflow_dispatch: # Allow manual trigger
 
 jobs:
