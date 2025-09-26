@@ -19,48 +19,67 @@ jobs:
       with:
         python-version: '3.11'
         
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         
     - name: Download previous database
-      continue-on-error: true
-      run: |
-        # Try to download the database from the previous run
-        if [ -f news.db ]; then
-          echo "Database already exists"
-        else
-          echo "No previous database found, starting fresh"
-        fi
-        
-    - name: Run news scraper
-      env:
-        NEWS_SITE_1: ${{ secrets.NEWS_SITE_1 }}
-        NEWS_SITE_2: ${{ secrets.NEWS_SITE_2 }}
-        NEWS_SITE_3: ${{ secrets.NEWS_SITE_3 }}
-        NEWS_SITE_4: ${{ secrets.NEWS_SITE_4 }}
-        NEWS_SITE_5: ${{ secrets.NEWS_SITE_5 }}
-        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        OPENROUTER_API_URL: ${{ secrets.OPENROUTER_API_URL }}
-        AI_MODEL: ${{ secrets.AI_MODEL }}
-        AI_SELECTION_PROMPT: ${{ secrets.AI_SELECTION_PROMPT }}
-        AI_SUMMARIZATION_PROMPT: ${{ secrets.AI_SUMMARIZATION_PROMPT }}
-        AI_TRANSLATION_PROMPT: ${{ secrets.AI_TRANSLATION_PROMPT }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: python main.py
-      
-    - name: Upload database artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: news-database
-        path: news.db
-        retention-days: 30
-        
-    - name: Download database for next run
       uses: actions/download-artifact@v3
       continue-on-error: true
       with:
-        name: news-database
+        name: news-database-${{ github.repository_owner }}
         path: .
+        
+    - name: Run news scraper
+      env:
+        NEWS_SITE_1: ${{ vars.NEWS_SITE_1 || secrets.NEWS_SITE_1 || 'https://pedal.ir' }}
+        NEWS_SITE_2: ${{ vars.NEWS_SITE_2 || secrets.NEWS_SITE_2 || 'https://www.motor1.com' }}
+        NEWS_SITE_3: ${{ vars.NEWS_SITE_3 || secrets.NEWS_SITE_3 || 'https://www.autocar.co.uk' }}
+        NEWS_SITE_4: ${{ vars.NEWS_SITE_4 || secrets.NEWS_SITE_4 }}
+        NEWS_SITE_5: ${{ vars.NEWS_SITE_5 || secrets.NEWS_SITE_5 }}
+        NEWS_SITE_6: ${{ vars.NEWS_SITE_6 || secrets.NEWS_SITE_6 }}
+        NEWS_SITE_7: ${{ vars.NEWS_SITE_7 || secrets.NEWS_SITE_7 }}
+        NEWS_SITE_8: ${{ vars.NEWS_SITE_8 || secrets.NEWS_SITE_8 }}
+        NEWS_SITE_9: ${{ vars.NEWS_SITE_9 || secrets.NEWS_SITE_9 }}
+        NEWS_SITE_10: ${{ vars.NEWS_SITE_10 || secrets.NEWS_SITE_10 }}
+        OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        OPENROUTER_API_URL: ${{ vars.OPENROUTER_API_URL || secrets.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions' }}
+        AI_MODEL: ${{ vars.AI_MODEL || secrets.AI_MODEL || 'google/gemini-2.0-flash-exp:free' }}
+        AI_SELECTION_PROMPT: ${{ vars.AI_SELECTION_PROMPT || secrets.AI_SELECTION_PROMPT }}
+        AI_SUMMARIZATION_PROMPT: ${{ vars.AI_SUMMARIZATION_PROMPT || secrets.AI_SUMMARIZATION_PROMPT }}
+        AI_TRANSLATION_PROMPT: ${{ vars.AI_TRANSLATION_PROMPT || secrets.AI_TRANSLATION_PROMPT }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        echo "🚀 Starting news scraper..."
+        python main.py
+        echo "✅ News scraper completed"
+        
+    - name: Upload database artifact
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: news-database-${{ github.repository_owner }}
+        path: news.db
+        retention-days: 90
+        
+    - name: Show execution summary
+      if: always()
+      run: |
+        echo "📊 Execution Summary:"
+        echo "- Repository: ${{ github.repository }}"
+        echo "- Run ID: ${{ github.run_id }}"
+        echo "- Timestamp: $(date)"
+        if [ -f news.db ]; then
+          echo "- Database size: $(du -h news.db | cut -f1)"
+          echo "- Total records: $(sqlite3 news.db 'SELECT COUNT(*) FROM sent_news;' 2>/dev/null || echo 'N/A')"
+        fi

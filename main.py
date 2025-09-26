@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from datetime import datetime
 from urllib.parse import urljoin,urlparse
+from config import *
 
 load_dotenv()
 
@@ -10,16 +11,16 @@ class NewsScraper:
     def __init__(self):
         self.s=requests.Session()
         self.s.headers.update({'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
-        self.rss_paths=['/rss','/feed','/rss.xml','/feed.xml','/atom.xml','/?feed=rss2']
-        self.title_selectors=['h1 a','h2 a','h3 a','.title a','.headline a','article h1','article h2']
+        self.rss_paths=DEFAULT_RSS_PATHS
+        self.title_selectors=TITLE_SELECTORS
         self.api_url=os.getenv('OPENROUTER_API_URL','https://openrouter.ai/api/v1/chat/completions')
         self.api_key=os.getenv('OPENROUTER_API_KEY')
         self.model=os.getenv('AI_MODEL','google/gemini-2.0-flash-exp:free')
         self.tg_token=os.getenv('TELEGRAM_BOT_TOKEN')
         self.tg_chat=os.getenv('TELEGRAM_CHAT_ID')
-        self.selection_prompt=os.getenv('AI_SELECTION_PROMPT','Choose the best 9 news titles from the following list. Focus on car reviews, automotive entertainment, car culture, driving experiences, road tests, and fun automotive content. Prioritize articles about actual driving experiences, car comparisons, automotive technology reviews, and entertainment content related to cars. Avoid news about car prices, sales figures, market analysis, or purely commercial content. Return only the exact titles, one per line, nothing else.')
-        self.summarization_prompt=os.getenv('AI_SUMMARIZATION_PROMPT','Create an engaging summary from this car news article. The summary should be 150-250 words, exciting and captivating to make readers want to read more car content. Focus on the most interesting highlights, and make it sound dynamic and engaging for car enthusiasts. Do not use emojis. Write in a style that encourages readers to follow for more automotive content.')
-        self.translation_prompt=os.getenv('AI_TRANSLATION_PROMPT','Translate the following car news summary from English to Persian (Farsi). Keep automotive terms accurate and use natural Persian language. Maintain the engaging tone. Keep the same length. Do not use emojis. If the text is already in Persian, return it unchanged. Only return the translated text, nothing else.')
+        self.selection_prompt=os.getenv('AI_SELECTION_PROMPT',DEFAULT_PROMPTS['selection'])
+        self.summarization_prompt=os.getenv('AI_SUMMARIZATION_PROMPT',DEFAULT_PROMPTS['summarization'])
+        self.translation_prompt=os.getenv('AI_TRANSLATION_PROMPT',DEFAULT_PROMPTS['translation'])
         self.init_db()
     
     def init_db(self):
@@ -28,14 +29,13 @@ class NewsScraper:
         self.db.commit()
     
     def _log(self,msg,level="info"):
-        icons={"info":"ℹ️","success":"✅","warning":"⚠️","error":"❌","process":"🔄"}
-        print(f"{icons.get(level,'ℹ️')} {msg}")
+        print(f"{LOG_ICONS.get(level,'ℹ️')} {msg}")
     
     def _get_sites(self):
         return [os.getenv(f'NEWS_SITE_{i}') for i in range(1,21) if os.getenv(f'NEWS_SITE_{i}')]
     
     def _is_persian(self,text):
-        return len(re.findall(r'[\u0600-\u06FF]',text))/max(len(re.sub(r'\s','',text)),1)>0.3
+        return len(re.findall(r'[\u0600-\u06FF]',text))/max(len(re.sub(r'\s','',text)),1)>PERSIAN_TEXT_THRESHOLD
     
     def _try_rss(self,url):
         base=f"{urlparse(url).scheme}://{urlparse(url).netloc}"
@@ -139,7 +139,7 @@ class NewsScraper:
     def _make_api_call(self,prompt,content,max_tokens=800):
         try:
             # Add delay between API calls to avoid rate limiting
-            time.sleep(2)
+            time.sleep(RATE_LIMITS['api_call_delay'])
             headers={'Authorization':f'Bearer {self.api_key}','Content-Type':'application/json'}
             payload={'model':self.model,'messages':[{'role':'user','content':f"{prompt}\n\nContent:\n{content}"}],'max_tokens':max_tokens,'temperature':0.3}
             response=requests.post(self.api_url,headers=headers,json=payload,timeout=45)
@@ -264,7 +264,7 @@ class NewsScraper:
                         else:self._log("Telegram send failed","error")
                     else:self._log("Summary generation failed","error")
                 else:self._log("No content found","warning")
-            if i<len(selected_news):time.sleep(3)
+            if i<len(selected_news):time.sleep(RATE_LIMITS['news_process_delay'])
         return sent_count
     
     def run(self):
@@ -276,7 +276,7 @@ class NewsScraper:
             self._log(f"[{i}/{len(sites)}]","process")
             news=self.get_news_titles(site)
             all_news.extend(news)
-            if i<len(sites):time.sleep(2)
+            if i<len(sites):time.sleep(RATE_LIMITS['site_scrape_delay'])
         unique_news={}
         for news in all_news:
             key=news['title'].strip()
