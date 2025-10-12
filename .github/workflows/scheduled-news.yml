@@ -1,0 +1,60 @@
+name: Scheduled News Processing
+
+on:
+  schedule:
+    # Run between 10:30-17:30 UTC (14:00-21:00 Tehran time, UTC+3.5)
+    - cron: '30 10-17 * * *'  # Every hour from 10:30 to 17:30 UTC
+  workflow_dispatch:  # Allow manual triggering
+
+permissions:
+  contents: write  # Required to push changes back to repo
+
+jobs:
+  process-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: true
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Generate .env file from secrets
+      run: |
+        cat > .env << EOF
+        SITES=${{ vars.SITES }}
+        SITES_FILE=${{ vars.SITES_FILE }}
+        TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+        GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+        OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+        OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}
+        AI_MODEL=${{ vars.AI_MODEL }}
+        TITLE_SIMILARITY_PROMPT=${{ vars.TITLE_SIMILARITY_PROMPT }}
+        AI_SELECTION_PROMPT=${{ vars.AI_SELECTION_PROMPT }}
+        AI_SUMMARIZATION_PROMPT=${{ vars.AI_SUMMARIZATION_PROMPT }}
+        AI_TRANSLATION_PROMPT=${{ vars.AI_TRANSLATION_PROMPT }}
+        RATE_SITE_DELAY=${{ vars.RATE_SITE_DELAY }}
+        SIMILARITY_THRESHOLD=${{ vars.SIMILARITY_THRESHOLD }}
+        EOF
+    
+    - name: Configure git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+    
+    - name: Run news processor
+      run: python main.py
+    
+    - name: Clean up
+      run: rm -f .env
