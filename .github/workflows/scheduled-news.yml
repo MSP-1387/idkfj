@@ -2,8 +2,10 @@ name: Scheduled News Processing
 
 on:
   schedule:
-    # Run between 10:30-17:30 UTC (14:00-21:00 Tehran time, UTC+3.5)
-    - cron: '30 10-17 * * *'  # Every hour from 10:30 to 17:30 UTC
+    # Run at 7:40, 7:50, 8:00 PM Iran time (16:10, 16:20, 16:30 UTC)
+    - cron: '10 16 * * *'  # 7:40 PM Iran
+    - cron: '20 16 * * *'  # 7:50 PM Iran  
+    - cron: '30 16 * * *'  # 8:00 PM Iran
   workflow_dispatch:  # Allow manual triggering
 
 permissions:
@@ -36,14 +38,11 @@ jobs:
         SITES_FILE=${{ vars.SITES_FILE }}
         TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
-        GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
         OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
         OPENROUTER_API_URL=${{ vars.OPENROUTER_API_URL }}
         AI_MODEL=${{ vars.AI_MODEL }}
-        TITLE_SIMILARITY_PROMPT=${{ vars.TITLE_SIMILARITY_PROMPT }}
-        AI_SELECTION_PROMPT=${{ vars.AI_SELECTION_PROMPT }}
-        AI_SUMMARIZATION_PROMPT=${{ vars.AI_SUMMARIZATION_PROMPT }}
-        AI_TRANSLATION_PROMPT=${{ vars.AI_TRANSLATION_PROMPT }}
+        AI_FILTER_SELECT_PROMPT=${{ vars.AI_FILTER_SELECT_PROMPT }}
+        AI_PROCESS_PROMPT=${{ vars.AI_PROCESS_PROMPT }}
         RATE_SITE_DELAY=${{ vars.RATE_SITE_DELAY }}
         SIMILARITY_THRESHOLD=${{ vars.SIMILARITY_THRESHOLD }}
         EOF
