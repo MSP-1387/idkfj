@@ -37,7 +37,8 @@ class NewsProcessor:
         self.model = os.getenv('AI_MODEL', 'google/gemini-2.0-flash-exp:free')
         self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
         self.chat_id = os.getenv('TELEGRAM_CHAT_ID')
-        self.delay = float(os.getenv('RATE_SITE_DELAY', '1.0'))
+        delay_str = os.getenv('RATE_SITE_DELAY', '1.0')
+        self.delay = float(delay_str) if delay_str.strip() else 1.0
         
         # RSS paths
         self.rss_paths = ['/rss', '/feed', '/rss.xml', '/feed.xml', '/atom.xml', '/?feed=rss2']
