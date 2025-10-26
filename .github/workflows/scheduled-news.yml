@@ -1,4 +1,5 @@
 name: Scheduled News Processing
+# Auto news processing workflow
 
 on:
   schedule:
